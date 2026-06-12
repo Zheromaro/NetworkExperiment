@@ -16,6 +16,7 @@ PROJECT_NAME := NetworkExperiment
 CMAKE_OPT_PREFIX := $(PROJECT_NAME)
 BROWSER := python3 -c "$$BROWSER_PYSCRIPT"
 INSTALL_LOCATION := ~/.local
+BIN ?= $(PROJECT_NAME)
 # Select Compiler gcc/clang
 COMPILER ?= gcc
 
@@ -169,26 +170,26 @@ test_dir: ## Configure, rebuild, and run one GTest executable (use DIR=dir/name 
 # ==========================================================
 # 🚀 Run the project
 # ==========================================================
-run: ## Run the executable
-	@printf "$(COLOR_YELLOW)▶️  Starting $(PROJECT_NAME)...$(COLOR_RESET)\n"
-	@if [ -x ./build/bin/Release/$(PROJECT_NAME) ]; then \
-		./build/bin/Release/$(PROJECT_NAME); \
+run: ## Run the executable (make run BIN=client ARGS="--foo bar")
+	@printf "$(COLOR_YELLOW)▶️  Starting $(BIN)...$(COLOR_RESET)\n"
+	@if [ -x ./build/bin/Release/$(BIN) ]; then \
+		./build/bin/Release/$(BIN) $(ARGS); \
 		EXIT_CODE=$$?; \
-	elif [ -x ./build/bin/Debug/$(PROJECT_NAME) ]; then \
-		./build/bin/Debug/$(PROJECT_NAME); \
+	elif [ -x ./build/bin/Debug/$(BIN) ]; then \
+		./build/bin/Debug/$(BIN) $(ARGS); \
 		EXIT_CODE=$$?; \
 	else \
-		printf "$(COLOR_RED)❌ No executable found in build/bin/Release or build/bin/Debug$(COLOR_RESET)\n"; \
+		printf "$(COLOR_RED)❌ No executable '$(BIN)' found in build/bin/Release or build/bin/Debug$(COLOR_RESET)\n"; \
 		EXIT_CODE=1; \
 	fi; \
 	if [ $$EXIT_CODE -eq 0 ]; then \
-		printf "$(COLOR_GREEN)✅ Finished $(PROJECT_NAME)$(COLOR_RESET)\n"; \
+		printf "$(COLOR_GREEN)✅ Finished $(BIN)$(COLOR_RESET)\n"; \
 	else \
 		printf "$(COLOR_RED)❌ Execution failed (exit $$EXIT_CODE)$(COLOR_RESET)\n"; \
 	fi; \
 	exit $$EXIT_CODE
 
-brun: ## Build and run
+brun: ## Build and run (pass args: make brun BIN=client ARGS="--foo bar")
 	$(MAKE) build
 	$(MAKE) run
 

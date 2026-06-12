@@ -57,12 +57,55 @@ message(STATUS "📂 Found project sources and headers")
 # ==========================================================
 if(${PROJECT_NAME}_BUILD_TYPE STREQUAL "executable")
   message(STATUS "🏗️ Building as EXECUTABLE")
-  add_executable(${PROJECT_NAME} ${exe_sources})
-  set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE C)
 
-  if(${PROJECT_NAME}_ENABLE_UNIT_TESTING)
-    message(STATUS "📚 Building test library: ${PROJECT_NAME}_LIB")
-    add_library(${PROJECT_NAME}_LIB ${headers} ${sources})
+  # ---- Determine if we have multiple binaries in src/bin/ ----
+  if(bin_sources)
+    message(STATUS "📁 Detected src/bin/ — building multiple executables")
+    set(_has_bin_executables TRUE)
+  else()
+    message(STATUS "📁 No src/bin/ entries — building single executable from src/main.c")
+    set(_has_bin_executables FALSE)
+  endif()
+
+  if(_has_bin_executables)
+    # ---- Build each src/bin/*.c as its own executable ----
+    foreach(bin_source IN LISTS bin_sources)
+      cmake_path(GET bin_source STEM bin_name)
+      add_executable(${bin_name} ${bin_source} ${sources})
+      set_target_properties(${bin_name} PROPERTIES LINKER_LANGUAGE C)
+
+      # Collect all binary target names for later use
+      list(APPEND _bin_target_names ${bin_name})
+
+      message(STATUS "   └─ 📦 Binary target: ${bin_name} ← ${bin_source}")
+    endforeach()
+
+    # ---- Set output directories for all binary targets ----
+    foreach(target_name IN LISTS _bin_target_names)
+      set_target_properties(${target_name}
+        PROPERTIES
+          ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}"
+          LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}"
+          RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}"
+      )
+    endforeach()
+
+    # ---- Unit testing: build test library from shared sources ----
+    if(${PROJECT_NAME}_ENABLE_UNIT_TESTING)
+      message(STATUS "📚 Building test library: ${PROJECT_NAME}_LIB")
+      add_library(${PROJECT_NAME}_LIB ${headers} ${sources})
+      set_target_properties(${PROJECT_NAME}_LIB PROPERTIES LINKER_LANGUAGE C)
+    endif()
+
+  else()
+    # ---- single-executable path (src/main.c only) ----
+    add_executable(${PROJECT_NAME} ${exe_sources})
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE C)
+
+    if(${PROJECT_NAME}_ENABLE_UNIT_TESTING)
+      message(STATUS "📚 Building test library: ${PROJECT_NAME}_LIB")
+      add_library(${PROJECT_NAME}_LIB ${headers} ${sources})
+    endif()
   endif()
 
 elseif(${PROJECT_NAME}_BUILD_TYPE STREQUAL "header-only")
@@ -87,12 +130,24 @@ endif()
 
 # Verbose output
 if(${PROJECT_NAME}_VERBOSE_OUTPUT)
-  if(${PROJECT_NAME}_BUILD_EXECUTABLE)
-    verbose_message("Found the following sources:")
-    foreach(source IN LISTS exe_sources)
-      verbose_message("* ${source}")
-    endforeach()
-  elseif(NOT ${PROJECT_NAME}_BUILD_HEADERS_ONLY)
+  if(${PROJECT_NAME}_BUILD_TYPE STREQUAL "executable")
+    if(_has_bin_executables)
+      verbose_message("Building the following binary targets from src/bin/:")
+      foreach(bin_source IN LISTS bin_sources)
+        cmake_path(GET bin_source STEM bin_name)
+        verbose_message("* ${bin_name} ← ${bin_source}")
+      endforeach()
+      verbose_message("Shared implementation sources (linked into each binary):")
+      foreach(source IN LISTS sources)
+        verbose_message("* ${source}")
+      endforeach()
+    else()
+      verbose_message("Found the following sources:")
+      foreach(source IN LISTS exe_sources)
+        verbose_message("* ${source}")
+      endforeach()
+    endif()
+  elseif(NOT ${PROJECT_NAME}_BUILD_TYPE STREQUAL "header-only")
     verbose_message("Found the following sources:")
     foreach(source IN LISTS sources)
       verbose_message("* ${source}")
@@ -106,15 +161,17 @@ if(${PROJECT_NAME}_VERBOSE_OUTPUT)
 endif()
 
 # ==========================================================
-# 🧾 Output directories
+# 🧾 Output directories (single-executable fallback)
 # ==========================================================
-set_target_properties(
-  ${PROJECT_NAME}
-  PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}"
-)
+if(${PROJECT_NAME}_BUILD_TYPE STREQUAL "executable" AND NOT _has_bin_executables)
+  set_target_properties(
+    ${PROJECT_NAME}
+    PROPERTIES
+      ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}"
+      LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}"
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}"
+  )
+endif()
 
 if(${PROJECT_NAME}_BUILD_EXECUTABLE AND ${PROJECT_NAME}_ENABLE_UNIT_TESTING)
   set_target_properties(
@@ -136,15 +193,28 @@ endif()
 # Non-vcpkg external libraries
 include(cmake/ExternalLib.cmake)
 
-if(NOT ${PROJECT_NAME}_BUILD_HEADERS_ONLY)
+if(NOT ${PROJECT_NAME}_BUILD_TYPE STREQUAL "header-only")
   set(LINK_LIBS
     ${EXTERNAL_LIBS}
   )
 
-  target_link_libraries(${PROJECT_NAME} PRIVATE ${LINK_LIBS})
-  target_include_directories(${PROJECT_NAME} PUBLIC ${EXTERNAL_LIBS_INCLUDE})
+  if(${PROJECT_NAME}_BUILD_TYPE STREQUAL "executable")
+    if(_has_bin_executables)
+      # Link external libs into every binary target
+      foreach(target_name IN LISTS _bin_target_names)
+        target_link_libraries(${target_name} PRIVATE ${LINK_LIBS})
+        target_include_directories(${target_name} PUBLIC ${EXTERNAL_LIBS_INCLUDE})
+      endforeach()
+    else()
+      target_link_libraries(${PROJECT_NAME} PRIVATE ${LINK_LIBS})
+      target_include_directories(${PROJECT_NAME} PUBLIC ${EXTERNAL_LIBS_INCLUDE})
+    endif()
+  else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${LINK_LIBS})
+    target_include_directories(${PROJECT_NAME} PUBLIC ${EXTERNAL_LIBS_INCLUDE})
+  endif()
 
-  if(${PROJECT_NAME}_BUILD_EXECUTABLE AND ${PROJECT_NAME}_ENABLE_UNIT_TESTING)
+  if(${PROJECT_NAME}_BUILD_TYPE STREQUAL "executable" AND ${PROJECT_NAME}_ENABLE_UNIT_TESTING)
     target_link_libraries(${PROJECT_NAME}_LIB PRIVATE ${LINK_LIBS})
     target_include_directories(${PROJECT_NAME}_LIB PUBLIC ${EXTERNAL_LIBS_INCLUDE})
   endif()
@@ -153,7 +223,7 @@ endif()
 # ==========================================================
 # 📚 Include Directories
 # ==========================================================
-if(${PROJECT_NAME}_BUILD_HEADERS_ONLY)
+if(${PROJECT_NAME}_BUILD_TYPE STREQUAL "header-only")
   target_include_directories(
     ${PROJECT_NAME}
     INTERFACE
@@ -161,16 +231,29 @@ if(${PROJECT_NAME}_BUILD_HEADERS_ONLY)
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   )
 else()
-  target_include_directories(
-    ${PROJECT_NAME}
-    PUBLIC
-      $<INSTALL_INTERFACE:include>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}/src
-  )
+  if(${PROJECT_NAME}_BUILD_TYPE STREQUAL "executable" AND _has_bin_executables)
+    # Apply include dirs to all binary targets
+    foreach(target_name IN LISTS _bin_target_names)
+      target_include_directories(${target_name}
+        PUBLIC
+          $<INSTALL_INTERFACE:include>
+          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        PRIVATE
+          ${CMAKE_CURRENT_SOURCE_DIR}/src
+      )
+    endforeach()
+  else()
+    target_include_directories(
+      ${PROJECT_NAME}
+      PUBLIC
+        $<INSTALL_INTERFACE:include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+      PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+  endif()
 
-  if(${PROJECT_NAME}_BUILD_EXECUTABLE AND ${PROJECT_NAME}_ENABLE_UNIT_TESTING)
+  if(${PROJECT_NAME}_BUILD_TYPE STREQUAL "executable" AND ${PROJECT_NAME}_ENABLE_UNIT_TESTING)
     target_include_directories(
       ${PROJECT_NAME}_LIB
       PUBLIC
@@ -187,12 +270,21 @@ message(STATUS "✅ Include directories configured.")
 # ==========================================================
 # 📦 Installation Rules
 # ==========================================================
-install(
-  TARGETS ${PROJECT_NAME}
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-)
+if(${PROJECT_NAME}_BUILD_TYPE STREQUAL "executable" AND _has_bin_executables)
+  install(
+    TARGETS ${_bin_target_names}
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+  )
+else()
+  install(
+    TARGETS ${PROJECT_NAME}
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+  )
+endif()
 
 install(
   DIRECTORY include/${PROJECT_NAME_LOWERCASE}
@@ -219,9 +311,18 @@ message(STATUS "")
 message(STATUS "====== ${PROJECT_NAME} Configuration Summary ======")
 message(STATUS "🔧 C Compiler:            ${CMAKE_C_COMPILER} (${CMAKE_C_COMPILER_ID})")
 message(STATUS "🔧 Build type:            ${CMAKE_BUILD_TYPE}")
-message(STATUS "⚙️ Executable:            ${${PROJECT_NAME}_BUILD_EXECUTABLE}")
-message(STATUS "📜 Headers-only:          ${${PROJECT_NAME}_BUILD_HEADERS_ONLY}")
-message(STATUS "📦 Shared library:        ${${PROJECT_NAME}_BUILD_SHARED}")
+if(${PROJECT_NAME}_BUILD_TYPE STREQUAL "executable")
+  if(_has_bin_executables)
+    message(STATUS "⚙️  Project type:          Multiple Executables (src/bin/)")
+    foreach(target_name IN LISTS _bin_target_names)
+      message(STATUS "   └─ 📦 Binary:            ${target_name}")
+    endforeach()
+  else()
+    message(STATUS "⚙️  Project type:          Single Executable")
+  endif()
+else()
+  message(STATUS "⚙️  Project type:          ${${PROJECT_NAME}_BUILD_TYPE}")
+endif()
 message(STATUS "📦 Install prefix:        ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "🧪 Unit testing enabled:  ${${PROJECT_NAME}_ENABLE_UNIT_TESTING}")
 message(STATUS "=====================================================")
