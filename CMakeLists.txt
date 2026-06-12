@@ -55,7 +55,7 @@ message(STATUS "📂 Found project sources and headers")
 # ==========================================================
 # 🧱 Build Mode Logic
 # ==========================================================
-if(${PROJECT_NAME}_BUILD_EXECUTABLE)
+if(${PROJECT_NAME}_BUILD_TYPE STREQUAL "executable")
   message(STATUS "🏗️ Building as EXECUTABLE")
   add_executable(${PROJECT_NAME} ${exe_sources})
   set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE C)
@@ -65,11 +65,11 @@ if(${PROJECT_NAME}_BUILD_EXECUTABLE)
     add_library(${PROJECT_NAME}_LIB ${headers} ${sources})
   endif()
 
-elseif(${PROJECT_NAME}_BUILD_HEADERS_ONLY)
+elseif(${PROJECT_NAME}_BUILD_TYPE STREQUAL "header-only")
   message(STATUS "📜 Building as HEADER-ONLY library")
   add_library(${PROJECT_NAME} INTERFACE)
 
-elseif(${PROJECT_NAME}_BUILD_SHARED)
+elseif(${PROJECT_NAME}_BUILD_TYPE STREQUAL "shared")
   message(STATUS "📦 Building as SHARED library (.so / .dll / .dylib)")
   add_library(${PROJECT_NAME} SHARED ${headers} ${sources})
   set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -79,7 +79,7 @@ elseif(${PROJECT_NAME}_BUILD_SHARED)
     VISIBILITY_INLINES_HIDDEN ON
   )
 
-else()
+elseif(${PROJECT_NAME}_BUILD_TYPE STREQUAL "static")
   message(STATUS "📦 Building as STATIC library (.a / .lib)")
   add_library(${PROJECT_NAME} STATIC ${headers} ${sources})
   set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE C)

@@ -76,14 +76,12 @@ clean_all: ## Clean the entire build directory (including vcpkg)
 # ==========================================================
 build: ## Build the project in DEBUG mode (no tests, no optimizations)
 	cmake -B build \
-            -DCMAKE_C_COMPILER=$(CC) \
-            -DCMAKE_CXX_COMPILER=$(CXX) \
-            -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) \
-            -D$(CMAKE_OPT_PREFIX)_BUILD_EXECUTABLE=ON \
-            -D$(CMAKE_OPT_PREFIX)_BUILD_HEADERS_ONLY=OFF \
-            -D$(CMAKE_OPT_PREFIX)_BUILD_SHARED=OFF \
-            -D$(CMAKE_OPT_PREFIX)_ENABLE_UNIT_TESTING=OFF \
-            -DCMAKE_BUILD_TYPE=Debug
+	      -DCMAKE_C_COMPILER=$(CC) \
+	      -DCMAKE_CXX_COMPILER=$(CXX) \
+	      -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) \
+	      -D$(CMAKE_OPT_PREFIX)_BUILD_TYPE="executable" \
+	      -D$(CMAKE_OPT_PREFIX)_ENABLE_UNIT_TESTING=OFF \
+	      -DCMAKE_BUILD_TYPE=Debug
 	cmake --build build --config Debug
 
 rebuild: ## Clean and rebuild the project in DEBUG mode
@@ -95,9 +93,7 @@ release: clean_all ## Clean and rebuild for release in RELEASE mode
 	      -DCMAKE_C_COMPILER=$(CC) \
 	      -DCMAKE_CXX_COMPILER=$(CXX) \
 	      -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) \
-	      -D$(CMAKE_OPT_PREFIX)_BUILD_EXECUTABLE=ON \
-	      -D$(CMAKE_OPT_PREFIX)_BUILD_HEADERS_ONLY=OFF \
-	      -D$(CMAKE_OPT_PREFIX)_BUILD_SHARED=OFF \
+	      -D$(CMAKE_OPT_PREFIX)_BUILD_TYPE="executable" \
 	      -D$(CMAKE_OPT_PREFIX)_ENABLE_UNIT_TESTING=OFF \
 	      -DCMAKE_BUILD_TYPE=Release
 	cmake --build build --config Release
@@ -111,9 +107,7 @@ lib_static: ## Build as a STATIC library in DEBUG mode
 	      -DCMAKE_C_COMPILER=$(CC) \
 	      -DCMAKE_CXX_COMPILER=$(CXX) \
 	      -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) \
-	      -D$(CMAKE_OPT_PREFIX)_BUILD_EXECUTABLE=OFF \
-	      -D$(CMAKE_OPT_PREFIX)_BUILD_HEADERS_ONLY=OFF \
-	      -D$(CMAKE_OPT_PREFIX)_BUILD_SHARED=OFF \
+	      -D$(CMAKE_OPT_PREFIX)_BUILD_TYPE="static" \
 	      -D$(CMAKE_OPT_PREFIX)_ENABLE_UNIT_TESTING=OFF \
 	      -DCMAKE_BUILD_TYPE=Debug
 	cmake --build build --config Debug
@@ -123,9 +117,7 @@ lib_shared: ## Build as a SHARED library in DEBUG mode
 	      -DCMAKE_C_COMPILER=$(CC) \
 	      -DCMAKE_CXX_COMPILER=$(CXX) \
 	      -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) \
-	      -D$(CMAKE_OPT_PREFIX)_BUILD_EXECUTABLE=OFF \
-	      -D$(CMAKE_OPT_PREFIX)_BUILD_HEADERS_ONLY=OFF \
-	      -D$(CMAKE_OPT_PREFIX)_BUILD_SHARED=ON \
+	      -D$(CMAKE_OPT_PREFIX)_BUILD_TYPE="shared" \
 	      -D$(CMAKE_OPT_PREFIX)_ENABLE_UNIT_TESTING=OFF \
 	      -DCMAKE_BUILD_TYPE=Debug
 	cmake --build build --config Debug
@@ -135,9 +127,7 @@ lib_header_only: ## Build as a HEADER-ONLY library
 	      -DCMAKE_C_COMPILER=$(CC) \
 	      -DCMAKE_CXX_COMPILER=$(CXX) \
 	      -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) \
-	      -D$(CMAKE_OPT_PREFIX)_BUILD_EXECUTABLE=OFF \
-	      -D$(CMAKE_OPT_PREFIX)_BUILD_HEADERS_ONLY=ON \
-	      -D$(CMAKE_OPT_PREFIX)_BUILD_SHARED=OFF \
+	      -D$(CMAKE_OPT_PREFIX)_BUILD_TYPE="header-only" \
 	      -D$(CMAKE_OPT_PREFIX)_ENABLE_UNIT_TESTING=OFF \
 	      -DCMAKE_BUILD_TYPE=Debug
 	cmake --build build --config Debug
@@ -152,7 +142,7 @@ test_ctest: ## Configure, rebuild, and run CTest
 	cmake --build build --config Release
 	cd build && ctest -C Release -VV
 
-test_direct: ## Configure, rebuild, and run all GTest executables directly
+test_gtest: ## Configure, rebuild, and run all GTest executables directly
 	cmake -B build \
 	      -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) \
 	      -D$(CMAKE_OPT_PREFIX)_ENABLE_UNIT_TESTING=ON
