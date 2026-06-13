@@ -171,7 +171,7 @@ test_dir: ## Configure, rebuild, and run one GTest executable (use DIR=dir/name 
 # 🚀 Run the project
 # ==========================================================
 run: ## Run the executable (make run BIN=client ARGS="--foo bar")
-	@printf "$(COLOR_YELLOW)▶️  Starting $(BIN)...$(COLOR_RESET)\n"
+	@printf "$(COLOR_YELLOW)Using BIN=$(BIN) ARGS=$(ARGS) \n▶️  Starting $(BIN)...$(COLOR_RESET)\n"
 	@if [ -x ./build/bin/Release/$(BIN) ]; then \
 		./build/bin/Release/$(BIN) $(ARGS); \
 		EXIT_CODE=$$?; \
