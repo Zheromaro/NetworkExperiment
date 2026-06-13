@@ -56,30 +56,78 @@ int main(int argc, char *argv[])
     }
 
     char buffer[BUFFER_SIZE];
+    int num1;
+    int num2;
+    int choice;
+    int result;
 
     while (1) {
-        // Read user input
-        if (fgets(buffer, sizeof(buffer), stdin) == NULL)
-            break;
-
-        // Send message
-        if (send(sockfd, buffer, strlen(buffer), 0) == -1)
-            die("send");
-
-        // Receive server response
+        // Receive first prompt
         ssize_t bytes_received =
             recv(sockfd, buffer, sizeof(buffer) - 1, 0);
+
         if (bytes_received <= 0)
             break;
 
         buffer[bytes_received] = '\0';
+
         printf("Server: %s\n", buffer);
 
-        // End conversation if "Bye"
-        if (strncmp(buffer, "Bye", 3) == 0)
+        // Send first number
+        scanf("%d", &num1);
+
+        if (send(sockfd, &num1, sizeof(num1), 0) == -1)
+            die("send num1");
+
+        // Receive second prompt
+        bytes_received =
+            recv(sockfd, buffer, sizeof(buffer) - 1, 0);
+
+        if (bytes_received <= 0)
             break;
+
+        buffer[bytes_received] = '\0';
+
+        printf("Server: %s\n", buffer);
+
+        // Send second number
+        scanf("%d", &num2);
+
+        if (send(sockfd, &num2, sizeof(num2), 0) == -1)
+            die("send num2");
+
+        // Receive menu
+        bytes_received =
+            recv(sockfd, buffer, sizeof(buffer) - 1, 0);
+
+        if (bytes_received <= 0)
+            break;
+
+        buffer[bytes_received] = '\0';
+
+        printf("Server: %s\n", buffer);
+
+        // Send operation choice
+        scanf("%d", &choice);
+
+        if (send(sockfd, &choice, sizeof(choice), 0) == -1)
+            die("send choice");
+
+        // Exit calculator
+        if (choice == 5)
+            break;
+
+        // Receive calculation result
+        ssize_t result_bytes =
+            recv(sockfd, &result, sizeof(result), 0);
+
+        if (result_bytes <= 0)
+            break;
+
+        printf("Server: The result is %d\n", result);
     }
 
     close(sockfd);
+
     return EXIT_SUCCESS;
 }

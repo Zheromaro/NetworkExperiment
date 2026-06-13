@@ -196,6 +196,7 @@ include(cmake/ExternalLib.cmake)
 if(NOT ${PROJECT_NAME}_BUILD_TYPE STREQUAL "header-only")
   set(LINK_LIBS
     ${EXTERNAL_LIBS}
+    # Add pakages links here
   )
 
   if(${PROJECT_NAME}_BUILD_TYPE STREQUAL "executable")

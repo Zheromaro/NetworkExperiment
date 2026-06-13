@@ -18,7 +18,7 @@ BROWSER := python3 -c "$$BROWSER_PYSCRIPT"
 INSTALL_LOCATION := ~/.local
 BIN ?= $(PROJECT_NAME)
 # Select Compiler gcc/clang
-COMPILER ?= gcc
+COMPILER ?= clang
 
 ifeq ($(COMPILER),clang)
   export CC := clang
