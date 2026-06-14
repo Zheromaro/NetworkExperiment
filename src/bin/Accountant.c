@@ -62,42 +62,8 @@ int main(int argc, char *argv[])
     int result;
 
     while (1) {
-        // Receive first prompt
+        // Receive menu prompt
         ssize_t bytes_received =
-            recv(sockfd, buffer, sizeof(buffer) - 1, 0);
-
-        if (bytes_received <= 0)
-            break;
-
-        buffer[bytes_received] = '\0';
-
-        printf("Server: %s\n", buffer);
-
-        // Send first number
-        scanf("%d", &num1);
-
-        if (send(sockfd, &num1, sizeof(num1), 0) == -1)
-            die("send num1");
-
-        // Receive second prompt
-        bytes_received =
-            recv(sockfd, buffer, sizeof(buffer) - 1, 0);
-
-        if (bytes_received <= 0)
-            break;
-
-        buffer[bytes_received] = '\0';
-
-        printf("Server: %s\n", buffer);
-
-        // Send second number
-        scanf("%d", &num2);
-
-        if (send(sockfd, &num2, sizeof(num2), 0) == -1)
-            die("send num2");
-
-        // Receive menu
-        bytes_received =
             recv(sockfd, buffer, sizeof(buffer) - 1, 0);
 
         if (bytes_received <= 0)
@@ -116,6 +82,40 @@ int main(int argc, char *argv[])
         // Exit calculator
         if (choice == 5)
             break;
+
+        // Receive first number prompt
+        bytes_received =
+            recv(sockfd, buffer, sizeof(buffer) - 1, 0);
+
+        if (bytes_received <= 0)
+            break;
+
+        buffer[bytes_received] = '\0';
+
+        printf("Server: %s\n", buffer);
+
+        // Send first number
+        scanf("%d", &num1);
+
+        if (send(sockfd, &num1, sizeof(num1), 0) == -1)
+            die("send num1");
+
+        // Receive second number prompt
+        bytes_received =
+            recv(sockfd, buffer, sizeof(buffer) - 1, 0);
+
+        if (bytes_received <= 0)
+            break;
+
+        buffer[bytes_received] = '\0';
+
+        printf("Server: %s\n", buffer);
+
+        // Send second number
+        scanf("%d", &num2);
+
+        if (send(sockfd, &num2, sizeof(num2), 0) == -1)
+            die("send num2");
 
         // Receive calculation result
         ssize_t result_bytes =
